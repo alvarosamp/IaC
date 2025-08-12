@@ -54,4 +54,38 @@ prompt = st.text_area(
     height=150,
     placeholder="Exemplo: Crie o código IaC com Terraform para criar um bucket S3 na AWS com o nome 'dsa-bucket-super-seguro-12345', com versionamento e criptografia SSE-S3 habilitados."
 )
+if st.button('Gerar script terraform', type = 'primary', disabled= (not openai_llm)):
+    if prompt:
+        with st.spinner('Gerando script Terraform...'):
+            try:
+                #Define a tarefa para o agente com base no prompt do usuario
+                terraform_task = Task(
+                    description = (
+                        f'Com base na seguinte solicitação do usaurio, gere um script em terraform completo e funcional.',
+                        f'A saída deve ser APENAS o bloco de código HCL, sem nenhuma explicação ou texto adicional.',
+                        f'O código deve ser bem formatado e pronto para ser salvo em um arquivo .tf \n\n'
+                    ),
+                    expected_output = 'Um bloco de código contendo o script terraform(HCL). O código deve ser completo e não deve conter placeholders como "sua configuração".',
+                    agent = terraform_expert
+                )
+                #Cria e executa a equipe (CREW)
+                terraform_crew = Crew(
+                    agents = [terraform_expert],
+                    tasks = [terraform_task],
+                    process = Process.sequential,
+                    verbose = True
+                )
 
+                #Inicia o processo e obtém o resultado
+                result = terraform_crew.kickoff()
+                
+                #Exibe o resultado
+                st.header('Resultado Gerado')
+                st.code(result, language = 'terraform'),
+                st.sucess('Script gerado com sucesso! Obrigado DSA')
+            except Exception as e:
+                st.error(f'Erro ao gerar o script durante a exução {e}')
+    else:
+        st.warning('Por favor, forneça um prompt antes de gerar o script.')
+st.markdown('---')
+st.markdown('Contruido com streamlit e crew ai)
