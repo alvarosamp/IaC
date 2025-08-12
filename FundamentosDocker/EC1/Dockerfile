@@ -4,12 +4,13 @@ FROM python:3.12.3-slim
 #Define o diretorio de trabalho dentro do container
 WORKDIR /app
 
-#Copia e instala as dependencias python
-COPY C:\Users\vish8\OneDrive\Desktop\DSA\IaC\Iac\FundamentosDocker\EC1\app\requirements.txt /app/requirements.txt
+
+# Copia e instala as dependências Python
+COPY ./app/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
-#Copia o restante dos arquivos da aplicação
-COPY ./app .
+# Copia o restante dos arquivos da aplicação
+COPY ./app /app
 
 #Expoe a porta do Streamlit
 EXPOSE 8501

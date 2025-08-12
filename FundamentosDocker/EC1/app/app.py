@@ -2,8 +2,10 @@
 #Script para aplicação para criar a interface de usuário e gerenciar a interação com o agente de IA
 
 import os
+import time
 import streamlit as st
-import crewai import Agent, Task, Crew
+import crewai
+from crewai import Agent, Task, Crew
 from crewai.process import Process
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
@@ -26,8 +28,9 @@ st.markdown('' \
 #Configuração de agente crewaAI
 # 0 try-except garante que nosso app mostre um erro amigavel se a chave da api nao for encontrada
 try: 
+    openai_model = os.getenv('OPENAI_MODEL', 'gpt-4o-mini')
     openai_llm = ChatOpenAI(
-        model = 'gpt-4',
+        model = openai_model,
         api_key = os.getenv('OPENAI_API_KEY')
     )
 except Exception as e:
@@ -60,10 +63,11 @@ if st.button('Gerar script terraform', type = 'primary', disabled= (not openai_l
             try:
                 #Define a tarefa para o agente com base no prompt do usuario
                 terraform_task = Task(
-                    description = (
-                        f'Com base na seguinte solicitação do usaurio, gere um script em terraform completo e funcional.',
-                        f'A saída deve ser APENAS o bloco de código HCL, sem nenhuma explicação ou texto adicional.',
-                        f'O código deve ser bem formatado e pronto para ser salvo em um arquivo .tf \n\n'
+                    description=(
+                        "Com base na seguinte solicitação do usuário, gere um script em Terraform completo e funcional. "
+                        "A saída deve ser APENAS o bloco de código HCL, sem nenhuma explicação ou texto adicional. "
+                        "O código deve ser bem formatado e pronto para ser salvo em um arquivo .tf.\n\n"
+                        f"Solicitação do usuário: {prompt}"
                     ),
                     expected_output = 'Um bloco de código contendo o script terraform(HCL). O código deve ser completo e não deve conter placeholders como "sua configuração".',
                     agent = terraform_expert
@@ -76,16 +80,40 @@ if st.button('Gerar script terraform', type = 'primary', disabled= (not openai_l
                     verbose = True
                 )
 
-                #Inicia o processo e obtém o resultado
-                result = terraform_crew.kickoff()
+                # Inicia o processo com tentativas e backoff para lidar com RateLimit/quota
+                max_attempts = 3
+                delay = 2  # segundos
+                last_err = None
+                for attempt in range(1, max_attempts + 1):
+                    try:
+                        result = terraform_crew.kickoff()
+                        break
+                    except Exception as e:
+                        msg = str(e)
+                        last_err = e
+                        if any(x in msg for x in [
+                            'RateLimitError',
+                            'rate limit',
+                            'quota',
+                            '429'
+                        ]):
+                            if attempt < max_attempts:
+                                st.info(f"Limite de taxa/quota atingido. Nova tentativa em {delay}s (tentativa {attempt}/{max_attempts})…")
+                                time.sleep(delay)
+                                delay *= 2
+                                continue
+                        # Outro erro ou esgotou tentativas
+                        raise
                 
                 #Exibe o resultado
                 st.header('Resultado Gerado')
-                st.code(result, language = 'terraform'),
-                st.sucess('Script gerado com sucesso! Obrigado DSA')
+                st.code(result, language='terraform')
+                st.success('Script gerado com sucesso! Obrigado DSA')
             except Exception as e:
-                st.error(f'Erro ao gerar o script durante a exução {e}')
+                st.error(f'Erro ao gerar o script durante a execução: {e}')
+                if any(x in str(e) for x in ['quota', 'RateLimit', '429']):
+                    st.warning('Parece um erro de cota/limite de taxa. Verifique seu plano e créditos na OpenAI ou tente novamente mais tarde.')
     else:
         st.warning('Por favor, forneça um prompt antes de gerar o script.')
 st.markdown('---')
-st.markdown('Contruido com streamlit e crew ai)
+st.markdown('Construído com streamlit e crew ai')

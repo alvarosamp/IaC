@@ -1,0 +1,12 @@
+#Este arquivo orquestra todo o serviço
+services:
+  dsa_ai_agent_app:
+    build: . #. indica diretorio corrente
+    container_name: terraform-dsa-ai-agent-container_name #Adicionando o nome do container. Vai buscar o dockeerfile e criar a imagem com esse nome
+    ports: #Mapeando a porta 8501 do container para a porta 8501 da máquina host
+      - "8501:8501"
+    env_file: #Arquivo contendo variáveis de ambiente
+      - .env
+    volumes:
+      - ./app:/app
+    restart: unless-stopped
