@@ -30,4 +30,28 @@ try:
         model = 'gpt-4',
         api_key = os.getenv('OPENAI_API_KEY')
     )
-except Exception
+except Exception as e:
+    st.error(f'Erro ao inicializar o modelo de linguagem : {e}')
+    openai_llm = None
+#Define o agente de ia
+terraform_expert = Agent(
+  role='Especialista Sênior em Infraestrutura como Código',
+  goal='Criar scripts Terraform precisos, eficientes e seguros com base nos requisitos do usuário.',
+  backstory=(
+    "Você é um Engenheiro de DataOps altamente experiente com uma década de experiência na automação "
+    "de provisionamento de infraestrutura na nuvem usando Terraform. Você tem um profundo conhecimento "
+    "dos provedores de nuvem como AWS, Azure e GCP, e é mestre em escrever código HCL (HashiCorp "
+    "Configuration Language) limpo, modular e reutilizável. Sua missão é traduzir "
+    "descrições de alto nível da infraestrutura desejada em código Terraform pronto para produção."
+  ),
+  verbose=True,
+  allow_delegation=False,
+  llm=openai_llm
+)
+# Interface do usurio 
+prompt = st.text_area(
+    "Forneça um prompt claro e detalhado. Quanto mais específico você for, melhor será o resultado.",
+    height=150,
+    placeholder="Exemplo: Crie o código IaC com Terraform para criar um bucket S3 na AWS com o nome 'dsa-bucket-super-seguro-12345', com versionamento e criptografia SSE-S3 habilitados."
+)
+
